@@ -16,11 +16,10 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 // Media Library
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 
-// Ввод контакта
+// Ввод контакта и документов
 use App\Enums\ContactMethodType;
-use Filament\Forms\Components\Repeater;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
+use App\Enums\ContactDocumentType;
+use Filament\Forms\Components\{DatePicker, Repeater, Select, Textarea, TextInput};
 
 class ContactResource extends Resource
 {
@@ -184,6 +183,29 @@ class ContactResource extends Resource
 				->reorderable()                     // перетаскивание ↑↓
 				->columnSpanFull(),
 				
+			Repeater::make('documents')
+				->label('Документи')
+				->relationship() // связывает с contact_documents
+				->schema([
+					Select::make('type')->label('Тип')->options(ContactDocumentType::class)->required(),
+					TextInput::make('number')->label('Номер')->maxLength(64),
+					DatePicker::make('issue_date')->label('Дата видачі'),
+					DatePicker::make('exp_date')->label('Термін дії'),
+					Textarea::make('notes')->label('Примітки'),
+					SpatieMediaLibraryFileUpload::make('files')->label('Файли')
+						->collection('files')
+			//			->multiple()
+			//			->maxFiles(10)
+						->acceptedFileTypes(['image/*', 'application/pdf'])
+						->columnSpanFull(),
+				])
+				->addActionLabel('Додати документ')
+				->columns(2)
+				->defaultItems(0)
+				->deletable()
+				->reorderable()
+				->columnSpanFull(),				
+				
 				
 				
 		];
@@ -284,11 +306,21 @@ class ContactResource extends Resource
         ];
     }
 
-    public static function getEloquentQuery(): Builder
-    {
-        return parent::getEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ]);
-    }
+
+	public static function getEloquentQuery(): Builder
+	{
+		return parent::getEloquentQuery()
+			->with([
+				// грузим группы, документы и media файлов к каждому документу!
+				'group',
+				'documents.media', // <------ ВАЖНО!
+				'methods',
+			])
+			->withoutGlobalScopes([
+				SoftDeletingScope::class,
+			]);
+	}
+	
+	
+	
 }

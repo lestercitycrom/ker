@@ -9,8 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
-use App\Enums\ContactType;
-use App\Enums\ContactGender;
+use App\Enums\ContactDocumentType;
 use App\Models\Traits\HasActivityLog;
 
 
@@ -32,6 +31,7 @@ class ContactDocument extends Model implements HasMedia
 		'exp_date',
 		'notes',
 	];
+
 
 	protected $casts = [
 		'type'       => ContactDocumentType::class,

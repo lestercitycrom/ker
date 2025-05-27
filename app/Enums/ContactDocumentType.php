@@ -2,10 +2,10 @@
 
 namespace App\Enums;
 
-use Filament\Tables\Concerns\HasColor;
-use Filament\Tables\Concerns\HasLabel;
-use Filament\Tables\Concerns\HasIcon;
-use Filament\Tables\Concerns\HasDescription;
+use Filament\Support\Contracts\HasColor;
+use Filament\Support\Contracts\HasLabel;
+use Filament\Support\Contracts\HasIcon;
+use Filament\Support\Contracts\HasDescription;
 
 /**
  * ContactDocumentType: типы документов для контакта
@@ -19,7 +19,10 @@ enum ContactDocumentType: string implements HasLabel, HasColor, HasIcon, HasDesc
 	case CardId              = 'card_id';
 	case Other               = 'other';
 
-	public function label(): string
+	/**
+	 * Get label for enum value.
+	 */
+	public function getLabel(): string
 	{
 		return match ($this) {
 			self::DriverLicense     => 'Driver license',
@@ -31,7 +34,10 @@ enum ContactDocumentType: string implements HasLabel, HasColor, HasIcon, HasDesc
 		};
 	}
 
-	public function color(): string
+	/**
+	 * Get color for enum value.
+	 */
+	public function getColor(): string
 	{
 		return match ($this) {
 			self::DriverLicense     => 'primary',
@@ -43,7 +49,10 @@ enum ContactDocumentType: string implements HasLabel, HasColor, HasIcon, HasDesc
 		};
 	}
 
-	public function icon(): string
+	/**
+	 * Get icon for enum value.
+	 */
+	public function getIcon(): string
 	{
 		return match ($this) {
 			self::DriverLicense     => 'heroicon-o-document-text',
@@ -55,7 +64,10 @@ enum ContactDocumentType: string implements HasLabel, HasColor, HasIcon, HasDesc
 		};
 	}
 
-	public function description(): string
+	/**
+	 * Get description for enum value.
+	 */
+	public function getDescription(): string
 	{
 		return match ($this) {
 			self::DriverLicense     => 'Driver’s license document',
