@@ -1,0 +1,16 @@
+# 1) Текстовые файлы
+*               text=auto eol=lf
+
+# 2) PHP и Blade в UTF-8 без BOM
+*.php           text working-tree-encoding=UTF-8
+*.blade.php     text working-tree-encoding=UTF-8 diff=php
+
+# 3) Диффы для статичных форматов
+*.css           diff=css
+*.html          diff=html
+*.md            diff=markdown
+
+# 4) Скрыть из экспортируемых архивов
+/.github        export-ignore
+CHANGELOG.md    export-ignore
+.styleci.yml    export-ignore
