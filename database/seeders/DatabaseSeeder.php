@@ -15,7 +15,7 @@ class DatabaseSeeder extends Seeder
     {
 		
 		// $this->call(ContactGroupSeeder::class);
-		$this->call(VehicleCategorySeeder::class);
+		//$this->call(VehicleCategorySeeder::class);
 
     }
 }

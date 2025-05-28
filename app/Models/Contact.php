@@ -15,84 +15,109 @@ use App\Enums\ContactGender;
 
 class Contact extends Model implements HasMedia
 {
-	use HasFactory;
-	use SoftDeletes;
-	use InteractsWithMedia;
-	use HasActivityLog;
+    use HasFactory;
+    use SoftDeletes;
+    use InteractsWithMedia;
+    use HasActivityLog;
 
-	/**
-	 * Mass-assignable fields
-	 *
-	 * @var array<int,string>
-	 */
-	protected $fillable = [
-		'type',
-		'first_name',
-		'last_name',
-		'group_id',
-		'company_name',
-		'contact_person',
-		'registration_number',
-		'vat_number',
-		'website',
-		'gender',
-		'birthday',
-		'country',
-		'state',
-		'city',
-		'street',
-		'building',
-		'zip',
-		'email',
-		'phone',
-		'notes',
-	];
+    /**
+     * Mass-assignable fields
+     *
+     * @var array<int,string>
+     */
+    protected $fillable = [
+        'type',
+        'first_name',
+        'last_name',
+        'group_id',
+        'company_name',
+        'contact_person',
+        'registration_number',
+        'vat_number',
+        'website',
+        'gender',
+        'birthday',
+        'country',
+        'state',
+        'city',
+        'street',
+        'building',
+        'zip',
+        'email',
+        'phone',
+        'notes',
+    ];
 
-	/**
-	 * Cast attributes to appropriate types
-	 *
-	 * @var array<string,string>
-	 */
-	protected $casts = [
-		'type'     => ContactType::class,
-		'gender'   => ContactGender::class,
-		'birthday' => 'date',
-	];
+    /**
+     * Cast attributes to appropriate types
+     *
+     * @var array<string,string>
+     */
+    protected $casts = [
+        'type'     => ContactType::class,
+        'gender'   => ContactGender::class,
+        'birthday' => 'date',
+    ];
 
-	/**
-	 * Belongs to a contact group.
-	 */
-	public function group(): BelongsTo
-	{
-		return $this->belongsTo(ContactGroup::class);
-	}
+    /**
+     * Belongs to a contact group.
+     */
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(ContactGroup::class);
+    }
 
-	/**
-	 * Dynamic messenger/contact methods.
-	 */
-	public function methods(): HasMany
-	{
-		return $this->hasMany(ContactMethod::class);
-	}
+    /**
+     * Dynamic messenger/contact methods.
+     */
+    public function methods(): HasMany
+    {
+        return $this->hasMany(ContactMethod::class);
+    }
 
-	/**
-	 * Document relation.
-	 */
-	public function documents(): HasMany
-	{
-		return $this->hasMany(ContactDocument::class);
-	}
+    /**
+     * Document relation.
+     */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(ContactDocument::class);
+    }
 
-	/**
-	 * Configure media collections.
-	 */
-	public function registerMediaCollections(): void
-	{
-		// Single profile photo
-		$this->addMediaCollection('photo')
-			->singleFile();
+    /**
+     * Configure media collections.
+     */
+    public function registerMediaCollections(): void
+    {
+        // Single profile photo
+        $this->addMediaCollection('photo')
+            ->singleFile();
 
-		// Multiple document files
-		$this->addMediaCollection('documents');
-	}
+        // Multiple document files
+        $this->addMediaCollection('documents');
+    }
+
+    /**
+     * Display name for selects (last + first name or company, with type in brackets)
+     */
+    public function getDisplayNameAttribute(): string
+    {
+        $parts = [];
+        if ($this->last_name) {
+            $parts[] = $this->last_name;
+        }
+        if ($this->first_name) {
+            $parts[] = $this->first_name;
+        }
+        if (empty($parts) && $this->company_name) {
+            $parts[] = $this->company_name;
+        }
+        if (empty($parts)) {
+            $parts[] = 'Без імені';
+        }
+
+        // Тип из enum, с label или value
+        $type = $this->type?->getLabel() ?? $this->type?->value ?? '—';
+
+        return trim(implode(' ', $parts)) . " ({$type})";
+    }
 }

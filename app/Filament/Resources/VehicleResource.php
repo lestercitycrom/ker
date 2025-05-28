@@ -2,214 +2,192 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\VehicleStatus;
 use App\Filament\Resources\VehicleResource\Pages;
-use App\Filament\Resources\VehicleResource\RelationManagers;
 use App\Models\Vehicle;
-use Filament\Forms;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Tables\Filters\TrashedFilter;
 
 class VehicleResource extends Resource
 {
+    /** Модель */
     protected static ?string $model = Vehicle::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    /** Название иконки + счётчик */
+    protected static ?string $navigationIcon = 'heroicon-o-truck';
 
-    public static function form(Form $form): Form
+    public static function getLabel(): string        { return 'Автомобіль'; }
+    public static function getPluralLabel(): string  { return 'Автомобілі'; }
+    public static function getNavigationGroup(): string { return 'Флот'; }
+
+    /** Значок-счётчик у пункту меню */
+    public static function getNavigationBadge(): ?string
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('contact_id')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('vehicle_category_id')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('base_location_id')
-                    ->numeric(),
-                Forms\Components\TextInput::make('current_location_id')
-                    ->numeric(),
-                Forms\Components\TextInput::make('type')
-                    ->required()
-                    ->maxLength(255)
-                    ->default('Car'),
-                Forms\Components\TextInput::make('brand')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('model')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('registration_number')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('year'),
-                Forms\Components\TextInput::make('vin')
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('transmission'),
-                Forms\Components\TextInput::make('engine_volume')
-                    ->numeric(),
-                Forms\Components\TextInput::make('fuel_type'),
-                Forms\Components\TextInput::make('body_type')
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('drive_type'),
-                Forms\Components\TextInput::make('color')
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('odometer')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                Forms\Components\TextInput::make('fuel_level')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                Forms\Components\TextInput::make('tank_volume')
-                    ->numeric(),
-                Forms\Components\TextInput::make('fuel_consumption')
-                    ->numeric(),
-                Forms\Components\TextInput::make('seat_count')
-                    ->numeric(),
-                Forms\Components\TextInput::make('door_count')
-                    ->numeric(),
-                Forms\Components\TextInput::make('large_bags')
-                    ->numeric(),
-                Forms\Components\TextInput::make('small_bags')
-                    ->numeric(),
-                Forms\Components\TextInput::make('features'),
-                Forms\Components\TextInput::make('extra_attributes'),
-                Forms\Components\TextInput::make('tracker_imei')
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('tracker_phone_number')
-                    ->tel()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('status')
-                    ->required()
-                    ->maxLength(255)
-                    ->default('draft'),
-            ]);
+        return (string) static::$model::count();      // кол-во записей
     }
 
+    /** --------- Форма --------- */
+    public static function form(Form $form): Form
+    {
+        return $form->schema([
+            // Власник / клієнт
+			
+			Select::make('contact_id')
+				->label('Власник')
+				->options(function () {
+					// Обязательно учесть soft deletes!
+					return \App\Models\Contact::query()
+						->whereNull('deleted_at')
+						->get()
+						->mapWithKeys(function ($contact) {
+							return [$contact->id => $contact->display_name];
+						});
+				})
+				->searchable()
+				->preload()
+				->required(),
+
+
+            // Категорія
+            Select::make('vehicle_category_id')
+                ->label('Категорія')
+                ->relationship('category', 'name')
+                // ->searchable()
+                ->preload()
+                ->required(),
+
+            // Базова та поточна локації
+            Select::make('base_location_id')->label('Базова локація')
+                ->relationship('baseLocation', 'name')->searchable()->preload(),
+
+            Select::make('current_location_id')->label('Поточна локація')
+                ->relationship('currentLocation', 'name')->searchable()->preload(),
+
+            // Тип ТЗ
+            TextInput::make('type')->label('Тип')->default('Car')->required()->maxLength(255),
+
+            // Динамічний вибір марки та моделі
+		
+Select::make('brand')
+    ->label('Марка')
+    ->options(config('car_brands'))
+    ->reactive()
+    ->searchable()
+    ->required(),
+
+Select::make('model')
+    ->label('Модель')
+    ->options(fn ($get) => (array) (config('car_models')[$get('brand')] ?? []))
+    ->searchable()
+    ->required()
+    ->disabled(fn ($get) => !$get('brand')),
+
+
+            TextInput::make('registration_number')->label('Номер')->required()->maxLength(255),
+            TextInput::make('year')->label('Рік')->numeric(),
+            TextInput::make('vin')->label('VIN')->maxLength(255),
+            TextInput::make('transmission')->label('Коробка'),
+            TextInput::make('engine_volume')->label('Обʼєм (л)')->numeric(),
+            TextInput::make('fuel_type')->label('Пальне'),
+            TextInput::make('body_type')->label('Тип кузова')->maxLength(255),
+            TextInput::make('drive_type')->label('Привід'),
+            TextInput::make('color')->label('Колір')->maxLength(255),
+
+            TextInput::make('odometer')->label('Пробіг')->default(0)->numeric()->required(),
+            TextInput::make('fuel_level')->label('Рівень пального (%)')->default(0)->numeric()->required(),
+            TextInput::make('tank_volume')->label('Бак (л)')->numeric(),
+            TextInput::make('fuel_consumption')->label('Витрата (л/100км)')->numeric(),
+            TextInput::make('seat_count')->label('Місць')->numeric(),
+            TextInput::make('door_count')->label('Дверей')->numeric(),
+            TextInput::make('large_bags')->label('Великі валізи')->numeric(),
+            TextInput::make('small_bags')->label('Малі валізи')->numeric(),
+
+            TextInput::make('features')->label('Опції'),
+            TextInput::make('extra_attributes')->label('Дод. атрибути'),
+
+            TextInput::make('tracker_imei')->label('IMEI трекера')->maxLength(255),
+            TextInput::make('tracker_phone_number')->label('Телефон трекера')->tel()->maxLength(255),
+
+            Select::make('status')
+                ->label('Статус')
+                ->options(VehicleStatus::class)
+                ->required(),
+
+            // Фотографії (до 5)
+            SpatieMediaLibraryFileUpload::make('photos')
+                ->label('Фотографії')
+                ->collection('photos')
+                ->multiple()
+                ->maxFiles(5)
+                ->image()
+                ->responsiveImages(),
+        ]);
+    }
+
+    /** --------- Таблиця --------- */
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('contact_id')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('vehicle_category_id')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('base_location_id')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('current_location_id')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('type')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('brand')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('model')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('registration_number')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('year'),
-                Tables\Columns\TextColumn::make('vin')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('transmission'),
-                Tables\Columns\TextColumn::make('engine_volume')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('fuel_type'),
-                Tables\Columns\TextColumn::make('body_type')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('drive_type'),
-                Tables\Columns\TextColumn::make('color')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('odometer')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('fuel_level')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('tank_volume')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('fuel_consumption')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('seat_count')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('door_count')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('large_bags')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('small_bags')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('tracker_imei')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('tracker_phone_number')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('status')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                ImageColumn::make('photos')
+                    ->collection('photos')
+                    ->size(60)
+                    ->circular(),
+
+                TextColumn::make('registration_number')->label('Номер')->searchable()->sortable(),
+                TextColumn::make('brand')->label('Марка')->searchable()->sortable(),
+                TextColumn::make('model')->label('Модель')->searchable()->sortable(),
+                TextColumn::make('year')->label('Рік')->sortable(),
+                TextColumn::make('odometer')->label('Пробіг')->numeric()->sortable(),
+
+                BadgeColumn::make('status')
+                    ->label('Статус')
+                    ->enum(VehicleStatus::class)
+                    ->colors(VehicleStatus::class),
+
+                TextColumn::make('category.name')->label('Категорія')->searchable()->toggleable(),
+                TextColumn::make('contact.last_name')->label('Власник')->toggleable(),
+                TextColumn::make('baseLocation.name')->label('База')->toggleable(),
+                TextColumn::make('currentLocation.name')->label('Поточна локація')->toggleable(),
+
+                TextColumn::make('updated_at')->label('Змінено')->dateTime()->toggleable(),
             ])
-            ->filters([
-                Tables\Filters\TrashedFilter::make(),
-            ])
+            ->filters([ TrashedFilter::make() ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
+                \Filament\Tables\Actions\ViewAction::make(),
+                \Filament\Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                    Tables\Actions\ForceDeleteBulkAction::make(),
-                    Tables\Actions\RestoreBulkAction::make(),
-                ]),
+                \Filament\Tables\Actions\DeleteBulkAction::make(),
+                \Filament\Tables\Actions\ForceDeleteBulkAction::make(),
+                \Filament\Tables\Actions\RestoreBulkAction::make(),
             ]);
     }
 
-    public static function getRelations(): array
-    {
-        return [
-            //
-        ];
-    }
-
+    /** --------- Сторінки --------- */
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListVehicles::route('/'),
+            'index'  => Pages\ListVehicles::route('/'),
             'create' => Pages\CreateVehicle::route('/create'),
-            'view' => Pages\ViewVehicle::route('/{record}'),
-            'edit' => Pages\EditVehicle::route('/{record}/edit'),
+            'view'   => Pages\ViewVehicle::route('/{record}'),
+            'edit'   => Pages\EditVehicle::route('/{record}/edit'),
         ];
     }
 
+    /** --------- Запит Eloquent (з урах. SoftDeletes) --------- */
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ]);
+        return parent::getEloquentQuery()->withoutGlobalScopes([SoftDeletingScope::class]);
     }
 }
