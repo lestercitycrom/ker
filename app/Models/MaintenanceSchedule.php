@@ -3,15 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\Traits\HasActivityLog;
 
 class MaintenanceSchedule extends Model
 {
-	
-	use SoftDeletes;
-	use HasActivityLog;	
-	
 	protected $fillable = [
 		'vehicle_id',
 		'maintenance_type_id',
@@ -22,10 +16,12 @@ class MaintenanceSchedule extends Model
 	];
 
 	protected $casts = [
-		'last_date'        => 'date',
-		'next_date_due'    => 'date',
-		'last_odometer'    => 'integer',
-		'next_odometer_due'=> 'integer',
+		'vehicle_id'          => 'integer',
+		'maintenance_type_id' => 'integer',
+		'last_date'           => 'date',
+		'next_date_due'       => 'date',
+		'last_odometer'       => 'integer',
+		'next_odometer_due'   => 'integer',
 	];
 
 	public function vehicle()

@@ -11,25 +11,32 @@ use App\Enums\VehicleStatus;
 
 class Vehicle extends Model implements HasMedia
 {
-	use SoftDeletes, InteractsWithMedia, HasActivityLog;
+	use SoftDeletes;
+	use InteractsWithMedia;
+	use HasActivityLog;
 
+	/**
+	 * The attributes that are mass assignable.
+	 *
+	 * @var array<int,string>
+	 */
 	protected $fillable = [
 		'contact_id',
 		'vehicle_category_id',
 		'base_location_id',
 		'current_location_id',
 		'type',
-		'brand',
-		'model',
+		'brand_id',
+		'model_id',
 		'registration_number',
 		'year',
 		'vin',
-		'transmission',
+		'transmission_id',
 		'engine_volume',
-		'fuel_type',
-		'body_type',
-		'drive_type',
-		'color',
+		'fuel_id',
+		'body_type_id',
+		'drive_id',
+		'color_id',
 		'odometer',
 		'fuel_level',
 		'tank_volume',
@@ -45,44 +52,106 @@ class Vehicle extends Model implements HasMedia
 		'status',
 	];
 
+	/**
+	 * The attributes that should be cast.
+	 *
+	 * @var array<string,string|class-string>
+	 */
 	protected $casts = [
-		'features'          => 'array',
-		'extra_attributes'  => 'array',
-		'year'              => 'integer',
-		'odometer'          => 'integer',
-		'fuel_level'        => 'integer',
-		'tank_volume'       => 'integer',
-		'fuel_consumption'  => 'float',
-		'seat_count'        => 'integer',
-		'door_count'        => 'integer',
-		'large_bags'        => 'integer',
-		'small_bags'        => 'integer',
-		'status'            => VehicleStatus::class,
+		'contact_id'         => 'integer',
+		'vehicle_category_id'=> 'integer',
+		'base_location_id'   => 'integer',
+		'current_location_id'=> 'integer',
+		'year'               => 'integer',
+		'brand_id'           => 'integer',
+		'model_id'           => 'integer',
+		'transmission_id'    => 'integer',
+		'fuel_id'            => 'integer',
+		'body_type_id'       => 'integer',
+		'drive_id'           => 'integer',
+		'color_id'           => 'integer',
+		'features'           => 'array',
+		'extra_attributes'   => 'array',
+		'odometer'           => 'integer',
+		'fuel_level'         => 'integer',
+		'tank_volume'        => 'integer',
+		'fuel_consumption'   => 'float',
+		'seat_count'         => 'integer',
+		'door_count'         => 'integer',
+		'large_bags'         => 'integer',
+		'small_bags'         => 'integer',
+		'status'             => VehicleStatus::class,
 	];
 
-	// Новый FK: владелец/контакт (универсально)
+	/**
+	 * Owner contact relationship.
+	 */
 	public function contact()
 	{
 		return $this->belongsTo(Contact::class, 'contact_id');
 	}
 
+	/**
+	 * Vehicle category relationship.
+	 */
 	public function category()
 	{
 		return $this->belongsTo(VehicleCategory::class, 'vehicle_category_id');
 	}
 
+	/**
+	 * Base location relationship.
+	 */
 	public function baseLocation()
 	{
 		return $this->belongsTo(Location::class, 'base_location_id');
 	}
 
+	/**
+	 * Current location relationship.
+	 */
 	public function currentLocation()
 	{
 		return $this->belongsTo(Location::class, 'current_location_id');
 	}
 
-	public function orders() { return $this->hasMany(Order::class); }
-	public function damages() { return $this->hasMany(Damage::class); }
-	public function maintenanceSchedules() { return $this->hasMany(MaintenanceSchedule::class); }
-	public function serviceOrders() { return $this->hasMany(ServiceOrder::class); }
+	/**
+	 * Orders placed for this vehicle.
+	 */
+	public function orders()
+	{
+		return $this->hasMany(Order::class);
+	}
+
+	/**
+	 * Damages recorded for this vehicle.
+	 */
+	public function damages()
+	{
+		return $this->hasMany(Damage::class);
+	}
+
+	/**
+	 * Maintenance schedules for this vehicle.
+	 */
+	public function maintenanceSchedules()
+	{
+		return $this->hasMany(MaintenanceSchedule::class);
+	}
+
+	/**
+	 * Service orders for this vehicle.
+	 */
+	public function serviceOrders()
+	{
+		return $this->hasMany(ServiceOrder::class);
+	}
+
+	/**
+	 * Extras associated with this vehicle.
+	 */
+	public function extras()
+	{
+		return $this->belongsToMany(Extra::class, 'vehicle_extra');
+	}
 }

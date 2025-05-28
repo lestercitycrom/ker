@@ -61,4 +61,7 @@ class Order extends Model
 	public function extras()       { return $this->belongsToMany(Extra::class, 'order_extra')->withPivot(['quantity', 'price']); }
 	// Damages
 	public function damages()      { return $this->hasMany(Damage::class); }
+	
+
+	
 }

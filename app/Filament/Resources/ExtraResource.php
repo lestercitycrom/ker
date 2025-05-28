@@ -2,38 +2,38 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\MaintenanceTypeResource\Pages;
-use App\Models\MaintenanceType;
+use App\Filament\Resources\ExtraResource\Pages;
+use App\Models\Extra;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 
-class MaintenanceTypeResource extends Resource
+class ExtraResource extends Resource
 {
-    protected static ?string $model = MaintenanceType::class;
+    protected static ?string $model = Extra::class;
 
     // 3. Меню «Налаштування»
     protected static ?string $navigationGroup = 'Налаштування';
 
-    // 4. Іконка (наприклад, гаєчний ключ)
-    protected static ?string $navigationIcon = 'heroicon-o-wrench';
+    // 4. Іконка для «Опцій автомобіля»
+    protected static ?string $navigationIcon = 'heroicon-o-cog';
 
     // 5. Лейбли моделі
     public static function getModelLabel(): string
     {
-        return 'Тип обслуговування';
+        return 'Опція авто';
     }
 
     public static function getPluralModelLabel(): string
     {
-        return 'Типи обслуговування';
+        return 'Опції авто';
     }
 
     public static function getNavigationLabel(): string
     {
-        return 'Типи обслуговування';
+        return 'Опції авто';
     }
 
     public static function form(Form $form): Form
@@ -41,20 +41,26 @@ class MaintenanceTypeResource extends Resource
         return $form
             ->schema([
                 Forms\Components\TextInput::make('name')
-                    ->label('Назва')            // 1. переклад
+                    ->label('Назва')           // 1. переклад
                     ->required()
                     ->maxLength(255),
 
-                Forms\Components\TextInput::make('interval_km')
-                    ->label('Інтервал (км)')     // 1. переклад
-                    ->numeric(),
+                Forms\Components\TextInput::make('category')
+                    ->label('Категорія')       // 1. переклад
+                    ->maxLength(255),
 
-                Forms\Components\TextInput::make('interval_days')
-                    ->label('Інтервал (днів)')   // 1. переклад
-                    ->numeric(),
+                Forms\Components\TextInput::make('price')
+                    ->label('Ціна')            // 1. переклад
+                    ->required()
+                    ->numeric()
+                    ->prefix('₴'),             // если валюта — гривня
+
+                Forms\Components\Toggle::make('price_per_day')
+                    ->label('Ціна за день')    // 1. переклад
+                    ->required(),
 
                 Forms\Components\Textarea::make('description')
-                    ->label('Опис')             // 1. переклад
+                    ->label('Опис')            // 1. переклад
                     ->columnSpanFull(),
             ]);
     }
@@ -67,15 +73,18 @@ class MaintenanceTypeResource extends Resource
                     ->label('Назва')
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('interval_km')
-                    ->label('Інтервал (км)')
-                    ->numeric()
+                Tables\Columns\TextColumn::make('category')
+                    ->label('Категорія')
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('price')
+                    ->label('Ціна')
+                    ->money('UAH')            // при необходимости
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('interval_days')
-                    ->label('Інтервал (днів)')
-                    ->numeric()
-                    ->sortable(),
+                Tables\Columns\IconColumn::make('price_per_day')
+                    ->label('Ціна за день')
+                    ->boolean(),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Створено')
@@ -106,7 +115,8 @@ class MaintenanceTypeResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ManageMaintenanceTypes::route('/'),
+            // Файли Pages/ManageExtras.php:
+            'index' => Pages\ManageExtras::route('/'),
         ];
     }
 }
