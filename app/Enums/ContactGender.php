@@ -2,10 +2,7 @@
 
 namespace App\Enums;
 
-use Filament\Support\Contracts\HasColor;
-use Filament\Support\Contracts\HasDescription;
-use Filament\Support\Contracts\HasIcon;
-use Filament\Support\Contracts\HasLabel;
+use Filament\Support\Contracts\{HasColor, HasDescription, HasIcon, HasLabel};
 
 /**
  * Gender enum for Contact model (PHP 8.1 native).
