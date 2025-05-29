@@ -1,22 +1,19 @@
 <?php
 
-namespace App\Filament\Resources\OrderResource\Pages;
+namespace App\Filament\Resources\ViolationResource\Pages;
 
-use App\Filament\Resources\OrderResource;
+use App\Filament\Resources\ViolationResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
-class EditOrder extends EditRecord
+class EditViolation extends EditRecord
 {
-    protected static string $resource = OrderResource::class;
+    protected static string $resource = ViolationResource::class;
 
     protected function getHeaderActions(): array
     {
         return [
-            Actions\ViewAction::make(),
             Actions\DeleteAction::make(),
-            Actions\ForceDeleteAction::make(),
-            Actions\RestoreAction::make(),
         ];
     }
 	

@@ -3,74 +3,153 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\DamageResource\Pages;
-use App\Filament\Resources\DamageResource\RelationManagers;
 use App\Models\Damage;
-use Filament\Forms;
+use App\Models\Contact;
 use Filament\Forms\Form;
+use Filament\Forms\Components\{
+    Fieldset,
+    Select,
+    TextInput,
+    Textarea,
+    Toggle,
+    SpatieMediaLibraryFileUpload,
+};
 use Filament\Resources\Resource;
-use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Tables\Columns\{
+    TextColumn,
+    IconColumn,
+};
+use Filament\Tables\Actions\{
+    EditAction,
+    DeleteAction,
+    BulkActionGroup,
+    DeleteBulkAction,
+};
 
 class DamageResource extends Resource
 {
     protected static ?string $model = Damage::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    // Іконка в меню
+    protected static ?string $navigationIcon = 'heroicon-o-exclamation-circle';
+    // Заголовок в меню (множина)
+    protected static ?string $navigationLabel = 'Пошкодження';
+    // Мітка моделі (однина)
+    protected static ?string $modelLabel = 'Пошкодження';
+    // Мітка моделі (множина)
+    protected static ?string $pluralModelLabel = 'Пошкодження';
+	// Группа меню
+	protected static ?string $navigationGroup = 'Транспорт';
+
+
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
+    }
+
+    public static function getNavigationBadgeColor(): string
+    {
+        return 'danger';
+    }
 
     public static function form(Form $form): Form
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('vehicle_id')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('order_id')
-                    ->numeric(),
-                Forms\Components\TextInput::make('contact_id')
-                    ->numeric(),
-                Forms\Components\TextInput::make('title')
-                    ->maxLength(255),
-                Forms\Components\Textarea::make('description')
-                    ->columnSpanFull(),
-                Forms\Components\TextInput::make('severity'),
-                Forms\Components\Toggle::make('is_interior')
-                    ->required(),
-                Forms\Components\TextInput::make('part')
-                    ->maxLength(255),
-                Forms\Components\Toggle::make('resolved')
-                    ->required(),
-            ]);
+        return $form->schema([
+            Fieldset::make('Загальні дані')
+                ->schema([
+                    Select::make('vehicle_id')
+                        ->label('Автомобіль')
+                        ->relationship('vehicle', 'registration_number')
+                        ->searchable()
+                        ->preload()
+                        ->required(),
+                    Select::make('order_id')
+                        ->label('Замовлення')
+                        ->relationship('order', 'code')
+                        ->searchable()
+                        ->preload(),
+                    Select::make('contact_id')
+                        ->label('Контакт')
+                        ->relationship('contact', 'first_name')
+                        ->getOptionLabelUsing(fn (?int $contactId): string => Contact::find($contactId)?->display_name ?? '')
+                        ->searchable()
+                        ->preload(),
+                ])
+                ->columns(3),
+
+            Fieldset::make('Характер пошкодження')
+                ->schema([
+                    TextInput::make('title')
+                        ->label('Заголовок')
+                        ->maxLength(255),
+                    Select::make('severity')
+                        ->label('Ступінь серйозності')
+                        ->options(config('damage.severity'))
+                        ->default(config('damage.default_severity'))
+                        ->required(),
+                    TextInput::make('part')
+                        ->label('Частина')
+                        ->maxLength(255),
+                    Toggle::make('is_interior')
+                        ->label('Внутрішнє пошкодження')
+                        ->required(),
+                    Toggle::make('resolved')
+                        ->label('Вирішено')
+                        ->required(),
+                ])
+                ->columns(2),
+
+            Fieldset::make('Детальний опис')
+                ->schema([
+                    Textarea::make('description')
+                        ->label('Опис')
+                        ->columnSpanFull(),
+                ]),
+
+            // Фотографії пошкодження
+            Fieldset::make('Фотографії')
+                ->schema([
+                    SpatieMediaLibraryFileUpload::make('photos')
+                        ->label('Фото пошкоджень')
+                        ->collection('photos')
+                        ->multiple()
+                        ->image()
+                        ->enableDownload()
+                        ->columnSpanFull(),
+                ]),
+        ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('vehicle_id')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('order_id')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('contact_id')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('title')
+                TextColumn::make('title')
+                    ->label('Заголовок')
+                    ->searchable(),			
+                TextColumn::make('vehicle.registration_number')
+                    ->label('Автомобіль')
+                    ->sortable()
                     ->searchable(),
-                Tables\Columns\TextColumn::make('severity'),
-                Tables\Columns\IconColumn::make('is_interior')
-                    ->boolean(),
-                Tables\Columns\TextColumn::make('part')
+                TextColumn::make('order.code')
+                    ->label('Замовлення')
+                    ->sortable()
                     ->searchable(),
-                Tables\Columns\IconColumn::make('resolved')
+                TextColumn::make('severity')
+                    ->label('Ступінь')
+                    ->formatStateUsing(fn (?string $state): string => config('damage.severity')[$state] ?? $state)
+                    ->sortable(),
+                IconColumn::make('resolved')
+                    ->label('Вирішено')
                     ->boolean(),
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
+                    ->label('Створено')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
+                TextColumn::make('updated_at')
+                    ->label('Оновлено')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -79,12 +158,12 @@ class DamageResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }

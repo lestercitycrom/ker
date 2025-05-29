@@ -14,7 +14,6 @@ class Order extends Model
 
 	protected $fillable = [
 		'contact_id',
-		'vehicle_category_id',
 		'vehicle_id',
 		'manager_id',
 		'status',
@@ -45,12 +44,11 @@ class Order extends Model
 
 	// Client/renter
 	public function contact()      { return $this->belongsTo(Contact::class, 'contact_id'); }
-	// Category
-	public function category()     { return $this->belongsTo(VehicleCategory::class, 'vehicle_category_id'); }
+
 	// Car
 	public function vehicle()      { return $this->belongsTo(Vehicle::class, 'vehicle_id'); }
 	// Manager/issuer
-	public function manager()      { return $this->belongsTo(Contact::class, 'manager_id'); }
+	//public function manager()      { return $this->belongsTo(Contact::class, 'manager_id'); }
 	// Pickup/return locations
 	public function pickupLocation()   { return $this->belongsTo(Location::class, 'pickup_location_id'); }
 	public function returnLocation()   { return $this->belongsTo(Location::class, 'return_location_id'); }
@@ -63,5 +61,21 @@ class Order extends Model
 	public function damages()      { return $this->hasMany(Damage::class); }
 	
 
+	protected static function boot()
+	{
+		parent::boot();
+
+		static::creating(function ($order) {
+			if (!$order->code) {
+				$prefix = 'ORD';
+				$yearMonth = now()->format('Ym'); // например, 202405
+				$count = static::whereYear('created_at', now()->year)
+					->whereMonth('created_at', now()->month)
+					->count() + 1;
+				$number = str_pad($count, 5, '0', STR_PAD_LEFT);
+				$order->code = "$prefix-$yearMonth-$number";
+			}
+		});
+	}
 	
 }

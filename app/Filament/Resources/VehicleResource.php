@@ -119,12 +119,12 @@ class VehicleResource extends Resource
                 ->toggleable(),
             TextColumn::make('year')->label('Рік')->sortable(),
             TextColumn::make('odometer')->label('Пробіг')->numeric()->sortable(),
-            BadgeColumn::make('status')->label('Статус')->formatStateUsing(fn(VehicleStatus $state) => $state->getLabel())->color(fn(VehicleStatus $state) => $state->getColor()),
+            BadgeColumn::make('status')->label('Статус')->formatStateUsing(fn(VehicleStatus $state) => $state->getLabel())->color(fn(VehicleStatus $state) => $state->getColor())->sortable(),
             //TagsColumn::make('extras.name')->label('Опції')->separator(', ')->limit(3)->toggleable(),
         ])->filters([TrashedFilter::make()])
           ->actions([
               \Filament\Tables\Actions\ViewAction::make(),
-              \Filament\Tables\Actions\EditAction::make(),
+              \Filament\Tables\Actions\EditAction::make(),	  
           ])
           ->bulkActions([
               \Filament\Tables\Actions\DeleteBulkAction::make(),
