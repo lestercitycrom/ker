@@ -21,7 +21,7 @@ class ContactGroupResource extends Resource
 	protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
 	// Группа меню "Налаштування"
-	protected static ?string $navigationGroup = 'Контакти';
+	protected static ?string $navigationGroup = 'Налаштування';
 
 	// Название раздела в меню (украинский)
 	protected static ?string $navigationLabel = 'Групи контактів';
