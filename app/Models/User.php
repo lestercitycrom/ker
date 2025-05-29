@@ -8,7 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Spatie\Permission\Traits\HasRoles;
+///use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements FilamentUser
 {
@@ -18,7 +18,7 @@ class User extends Authenticatable implements FilamentUser
 	// Enable sending notifications
 	use Notifiable;
 	// Enable roles & permissions
-	use HasRoles;
+	//use HasRoles;
 
 	/**
 	 * The attributes that are mass assignable.

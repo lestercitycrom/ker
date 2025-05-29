@@ -3,7 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ContactResource\Pages;
-use App\Filament\Resources\ContactResource\RelationManagers;
 use App\Models\Contact;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -13,314 +12,144 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-// Media Library
-use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
+use App\Enums\{ContactMethodType, ContactDocumentType};
+use Filament\Forms\Components\{DatePicker, Repeater, Select, SpatieMediaLibraryFileUpload, Textarea, TextInput};
 
-// Ввод контакта и документов
-use App\Enums\ContactMethodType;
-use App\Enums\ContactDocumentType;
-use Filament\Forms\Components\{DatePicker, Repeater, Select, Textarea, TextInput};
+use App\Filament\Resources\ContactResource\Pages\{CreateIndividualContact, CreateCompanyContact};
 
 class ContactResource extends Resource
 {
-    protected static ?string $model = Contact::class;
+	// Модель
+	protected static ?string $model = Contact::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+	// Иконка ресурса
+	protected static ?string $navigationIcon = 'heroicon-o-user-group';
 
-	public static function form(Form $form): Form
+	// Группа меню
+	protected static ?string $navigationGroup = 'Контакти';
+
+	// Название меню
+	protected static ?string $navigationLabel = 'Список контактів';
+
+	// Названия ресурса (украинский)
+	protected static ?string $label = 'Контакт';
+	protected static ?string $pluralLabel = 'Контакти';
+
+		/**
+		 * Таблица контактов (полный перевод, фото, имя и фамилия отдельно)
+		 */
+		 
+	public static function getNavigationBadge(): ?string
 	{
-		return $form->schema([
-			// Переменная type (hidden): управляет видимостью полей
-			Forms\Components\Hidden::make('type')
-				->default('individual')
-				->reactive(),
+		return (string) \App\Models\Contact::count();
+	}		 
 
-			Forms\Components\Tabs::make('contact_tabs')
-				->persistTabInQueryString()
-				->tabs([
-					Forms\Components\Tabs\Tab::make('Фізособа')
-						->schema([
-							// При входе на вкладку — выставляем type
-							Forms\Components\Hidden::make('type')
-								->default('individual')
-								->afterStateHydrated(function ($component, $state, $record) {
-									if (blank($state)) {
-										$component->state('individual');
-									}
-								}),
 
-							...self::commonFields(),
+		 
+	public static function table(Table $table): Table
+	{
+		return $table
+			->columns([
+				// Фото Spatie
+				Tables\Columns\ImageColumn::make('photo')
+					->label('Фото')
+					->circular()
+					->getStateUsing(fn ($record) => $record->getFirstMediaUrl('photo') ?: null),
 
-							Forms\Components\Select::make('gender')
-								->label('Стать')
-								->options([
-									1 => 'Чоловіча',
-									2 => 'Жіноча',
-									3 => 'Не вказано',
-								])
-								->required(fn ($get) => $get('type') === 'individual'),
+				// Им'я (или назва компанії)
+				Tables\Columns\TextColumn::make('first_name')
+					->label('Ім’я')
+					->formatStateUsing(function ($state, $record) {
+						return $record->type === 'company'
+							? ($record->company_name ?? $record->display_name)
+							: $state;
+					})
+					->searchable(),
 
-							Forms\Components\DatePicker::make('birthday')
-								->label('Дата народження')
-								->required(fn ($get) => $get('type') === 'individual'),
-						])->columns(3),
+				// Прізвище (только для фіз.осіб)
+				Tables\Columns\TextColumn::make('last_name')
+					->label('Прізвище')
+					->formatStateUsing(function ($state, $record) {
+						return $record->type === 'company' ? '-' : $state;
+					})
+					->searchable(),
 
-					Forms\Components\Tabs\Tab::make('Компанія')
-						->schema([
-							Forms\Components\Hidden::make('type')
-								->default('company')
-								->afterStateHydrated(function ($component, $state, $record) {
-									if (blank($state)) {
-										$component->state('company');
-									}
-								}),
+				// Група
+				Tables\Columns\TextColumn::make('group.name')
+					->label('Група')
+					->sortable(),
 
-							...self::commonFields(),
+				// Email
+				Tables\Columns\TextColumn::make('email')
+					->label('E-mail')
+					->copyable(),
 
-							Forms\Components\TextInput::make('company_name')
-								->label('Назва компанії')
-								->required(fn ($get) => $get('type') === 'company'),
+				// Телефон
+				Tables\Columns\TextColumn::make('phone')
+					->label('Телефон'),
 
-							Forms\Components\TextInput::make('contact_person')
-								->label('Контактна особа'),
+				// Тип
+				Tables\Columns\BadgeColumn::make('type')
+					->label('Тип'),
+			])
+			->actions([
+				\Filament\Tables\Actions\Action::make('edit')
+					->label('Редагувати')
+					->icon(fn ($record) =>
+						($record->type instanceof \App\Enums\ContactType
+							? $record->type->value === 'company'
+							: $record->type === 'company'
+						)
+							? 'heroicon-o-building-office'
+							: 'heroicon-o-user'
+					)
+					->url(fn ($record) =>
+						($record->type instanceof \App\Enums\ContactType
+							? $record->type->value === 'company'
+							: $record->type === 'company'
+						)
+							? static::getUrl('edit-company', ['record' => $record])
+							: static::getUrl('edit-individual', ['record' => $record])
+					)
+					->openUrlInNewTab(false),
 
-							Forms\Components\TextInput::make('registration_number')
-								->label('Реєстраційний номер'),
+				\Filament\Tables\Actions\DeleteAction::make()
+					->label('Видалити'),
+			]);
 
-							Forms\Components\TextInput::make('vat_number')
-								->label('VAT номер'),
-
-							Forms\Components\TextInput::make('website')
-								->label('Веб-сайт'),
-						])->columns(3),
-				])
-				->columnSpanFull(),
-		]);
 	}
 
-	/**
-	 * Общие поля для контактів.
-	 * @return array
-	 */
-	protected static function commonFields(): array
+	public static function getRelations(): array
 	{
 		return [
-			SpatieMediaLibraryFileUpload::make('photo')
-				->label('Фото')
-				->image()
-				->imageEditor()
-				->maxSize(10240)
-				->collection('photo')
-				//->columnSpanFull()
-				,
-
-			Forms\Components\TextInput::make('first_name')
-				->label('Ім’я')
-				->required()
-				->maxLength(255),
-
-			Forms\Components\TextInput::make('last_name')
-				->label('Прізвище')
-				->maxLength(255),
-
-			Forms\Components\Select::make('group_id')
-				->label('Група')
-				->relationship('group', 'name')
-				->required(),
-
-			Forms\Components\TextInput::make('email')
-				->label('Email')
-				->email()
-				->maxLength(255),
-
-			Forms\Components\TextInput::make('phone')
-				->label('Телефон')
-				->tel()
-				->maxLength(255),
-
-			Forms\Components\Textarea::make('notes')
-				->label('Примітки')
-				->columnSpanFull(),
-
-			// Адрес
-			Forms\Components\TextInput::make('country')
-				->label('Країна')
-				->maxLength(255),
-			Forms\Components\TextInput::make('state')
-				->label('Область')
-				->maxLength(255),
-			Forms\Components\TextInput::make('city')
-				->label('Місто')
-				->maxLength(255),
-			Forms\Components\TextInput::make('street')
-				->label('Вулиця')
-				->maxLength(255),
-			Forms\Components\TextInput::make('building')
-				->label('Будинок')
-				->maxLength(255),
-			Forms\Components\TextInput::make('zip')
-				->label('Поштовий індекс')
-				->maxLength(255),
-				
-			Repeater::make('methods')
-				->label('Мессенджери / способи звʼязку')
-				->relationship()            // hasMany -> contact_methods
-				->schema([
-					Select::make('type')
-						->label('Тип')
-						->options(ContactMethodType::class)   // enum → ["skype"=>"Skype", …]
-						->required(),
-
-					TextInput::make('value')
-						->label('Логін / номер')
-						->required()
-						->maxLength(255),
-				])
-				->addActionLabel('Додати контакт')  // подпись кнопки «+»
-				->columns(2)                        // две колонки в строке
-				->defaultItems(0)                   // старт без строк
-				->deletable()                       // иконка корзины по умолчанию
-				->reorderable()                     // перетаскивание ↑↓
-				->columnSpanFull(),
-				
-			Repeater::make('documents')
-				->label('Документи')
-				->relationship() // связывает с contact_documents
-				->schema([
-					Select::make('type')->label('Тип')->options(ContactDocumentType::class)->required(),
-					TextInput::make('number')->label('Номер')->maxLength(64),
-					DatePicker::make('issue_date')->label('Дата видачі'),
-					DatePicker::make('exp_date')->label('Термін дії'),
-					Textarea::make('notes')->label('Примітки'),
-					SpatieMediaLibraryFileUpload::make('files')->label('Файли')
-						->collection('files')
-			//			->multiple()
-			//			->maxFiles(10)
-						->acceptedFileTypes(['image/*', 'application/pdf'])
-						->columnSpanFull(),
-				])
-				->addActionLabel('Додати документ')
-				->columns(2)
-				->defaultItems(0)
-				->deletable()
-				->reorderable()
-				->columnSpanFull(),				
-				
-				
-				
+			//
 		];
 	}
 
-
-
-
-
-
-
-    public static function table(Table $table): Table
-    {
-        return $table
-            ->columns([
-                Tables\Columns\TextColumn::make('type'),
-                Tables\Columns\TextColumn::make('first_name')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('last_name')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('group.name')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('company_name')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('contact_person')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('registration_number')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('vat_number')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('website')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('gender'),
-                Tables\Columns\TextColumn::make('birthday')
-                    ->date()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('country')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('state')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('city')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('street')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('building')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('zip')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('email')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('phone')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                Tables\Filters\TrashedFilter::make(),
-            ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                    Tables\Actions\ForceDeleteBulkAction::make(),
-                    Tables\Actions\RestoreBulkAction::make(),
-                ]),
-            ]);
-    }
-
-    public static function getRelations(): array
-    {
-        return [
-            //
-        ];
-    }
-
-    public static function getPages(): array
-    {
-        return [
-            'index' => Pages\ListContacts::route('/'),
-            'create' => Pages\CreateContact::route('/create'),
-            'view' => Pages\ViewContact::route('/{record}'),
-            'edit' => Pages\EditContact::route('/{record}/edit'),
-        ];
-    }
-
+	public static function getPages(): array
+	{
+		return [
+			'index' => Pages\ListContacts::route('/'),
+			//'create' => Pages\CreateContact::route('/create'),
+			'view' => Pages\ViewContact::route('/{record}'),
+			//'edit' => Pages\EditContact::route('/{record}/edit'),
+			'create-individual' => CreateIndividualContact::route('/create/individual'),
+			'create-company' => CreateCompanyContact::route('/create/company'),
+			'edit-individual' => Pages\EditIndividualContact::route('/{record}/edit-individual'),
+			'edit-company' => Pages\EditCompanyContact::route('/{record}/edit-company'),			
+		];
+	}
 
 	public static function getEloquentQuery(): Builder
 	{
 		return parent::getEloquentQuery()
 			->with([
-				// грузим группы, документы и media файлов к каждому документу!
 				'group',
-				'documents.media', // <------ ВАЖНО!
+				'documents.media',
 				'methods',
 			])
 			->withoutGlobalScopes([
 				SoftDeletingScope::class,
 			]);
 	}
-	
-	
-	
 }
