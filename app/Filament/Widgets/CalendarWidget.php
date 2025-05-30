@@ -84,11 +84,11 @@ class CalendarWidget extends Widget
 	{
 		$badgeKeys    = ['О','П','Р','В'];
 		$monthsConfig = [
-			['name'=>'Січень','month'=>1,'year'=>2025,'days'=>31],
-			['name'=>'Лютий','month'=>2,'year'=>2025,'days'=>28],
-			['name'=>'Березень','month'=>3,'year'=>2025,'days'=>31],
+			['name'=>'Травень','month'=>5,'year'=>2025,'days'=>29],
 			['name'=>'Квітень','month'=>4,'year'=>2025,'days'=>30],
-			['name'=>'Травень','month'=>5,'year'=>2025,'days'=>27],
+			['name'=>'Березень','month'=>3,'year'=>2025,'days'=>31],
+			['name'=>'Лютий','month'=>2,'year'=>2025,'days'=>28],
+			['name'=>'Січень','month'=>1,'year'=>2025,'days'=>31],
 		];
 
 		// Разворачиваем дни в массивы
